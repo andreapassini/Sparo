@@ -8,6 +8,7 @@ namespace ScriptableObjects
     public class HitscanScriptableObject: ScriptableObject
     {
         public readonly bool stopWithCooldown;
+        [Tooltip("used ony if stopWithAnimation is false")]
         public readonly float cooldown;
         
         [Space]
