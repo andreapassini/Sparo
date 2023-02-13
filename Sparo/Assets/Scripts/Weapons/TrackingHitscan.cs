@@ -1,4 +1,5 @@
 using System.Collections;
+using ScriptableObjects;
 using UnityEngine;
 
 namespace Weapons
@@ -9,30 +10,34 @@ namespace Weapons
         private bool _shooting = false;
         private Animator _animator;
 
-        [SerializeField] private Transform firePoint;
-        [SerializeField] private GameObject vfxShootEffect;
+        [Tooltip("Spawn point of the VFX, from Z axis")]
+        [SerializeField] private Transform firePointVFX;
+        private GameObject _vfxShootEffect;
         
         [Space]
-        [SerializeField] private float fireRate = .01f;
-        public float damage = 6f;
-    
-        [Space]
-        public LayerMask hitMask;
+        [Tooltip("Fire point of the Ray, from Z axis")]
+        [SerializeField] private Transform firePoint;
+        
+        [Space] 
+        public HitscanScriptableObject hitscanScriptableObject;
+
+        private float _fireRate = .01f;
+        private float _damage = 6f;
+        
+        private LayerMask _hitMask;
 
         private void Awake()
         {
             _animator = GetComponent<Animator>();
         }
-
         void Start()
         {
+            SetUpFields();
         }
-
-        // Update is called once per frame
         void Update()
         {
             // On mouse 0 hold, keep shooting
-            if (Input.GetMouseButton(0))
+            if (Input.GetMouseButton(0) && !_shooting)
             {
                 StartShooting();
             } else if (_shooting)
@@ -40,18 +45,16 @@ namespace Weapons
                 StopShooting();
             }
         }
-
         private void StartShooting()
         {
             _shooting = true;
             if (_shootEnumerator == null)
             {
-                _shootEnumerator = Shoot(fireRate);
+                _shootEnumerator = Shoot(_fireRate);
                 StartCoroutine(_shootEnumerator);
                 _animator.SetTrigger("shoot");
             }
         }
-
         private void StopShooting()
         {
             StopCoroutine(_shootEnumerator);
@@ -59,18 +62,17 @@ namespace Weapons
             _shooting = false;
             _animator.SetTrigger("stopShooting");
         }
-
         private IEnumerator Shoot(float shootingRate)
         {
             while (_shooting)
             {
                 RaycastHit hit;
                 // Does the ray intersect any objects excluding the player layer
-                if (Physics.Raycast(firePoint.position, firePoint.TransformDirection(Vector3.forward), out hit, Mathf.Infinity, hitMask))
+                if (Physics.Raycast(firePoint.position, firePoint.TransformDirection(Vector3.forward), out hit, Mathf.Infinity, _hitMask))
                 {
                     if (hit.transform.TryGetComponent(out Health health))
                     {
-                        health.GetComponent<Health>().TakeDamage(damage);
+                        health.GetComponent<Health>().TakeDamage(_damage);
                     }                    Debug.DrawRay(firePoint.position, firePoint.TransformDirection(Vector3.forward) * hit.distance, Color.yellow);
                     Debug.Log("Did Hit");
                 }
@@ -81,14 +83,21 @@ namespace Weapons
                 }
             
                 // VFX
-                if (vfxShootEffect)
+                if (_vfxShootEffect)
                 {
-                    Instantiate(vfxShootEffect, firePoint.forward, firePoint.rotation);
+                    Instantiate(_vfxShootEffect, firePointVFX.forward, firePointVFX.rotation);
                 }
                 
                 // wait
                 yield return new WaitForSeconds(shootingRate);
             }
+        }
+        private void SetUpFields()
+        {
+            _fireRate = hitscanScriptableObject.cooldown;
+            _damage = hitscanScriptableObject.damage;
+            _vfxShootEffect = hitscanScriptableObject.vfxShootEffect;
+            _hitMask = hitscanScriptableObject.hitMask;
         }
     }
 }
